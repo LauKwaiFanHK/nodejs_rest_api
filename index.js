@@ -1,4 +1,4 @@
-import express from "express";
+import express, { json } from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 
@@ -11,36 +11,62 @@ app.use(helmet());
 // Enable the app to create a cookie parser middleware.
 app.use(cookieParser());
 // Enable the app to process POST request.
-app.use(express.json());
+app.use(json());
+
+// Basic logging.
+app.use((req, res, next) => {
+    console.log('Time:', Date.now());
+    console.log(req.headers);
+    next();
+});
 
 // Set a route for root URL.
 // The app responds with a message for requests to the root URL. 
 app.get('/', (req, res) => {
-    // Check if a user is logged in.
-    let username = req.cookies.username;
-    if (username) {
-        res.send(`Hello ${username}!`);
-    } else {
-        res.send('Hello world!!!');
+    try {
+        // Check if a user is logged in.
+        if (req.cookies && req.cookies.username) {
+            res.send(`Hello ${req.cookies.username}!`); // Links: 'welcome', 'logout'
+        } else {
+            res.status(401).send('You must first login'); // Links: '/'
+        }
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: "Error in invocation of API: /" });
     }
 });
 
 // Set a route for user to login.
 app.get('/login', (req, res) => {
-    // Check if login failed by checking if the path contains a query parameter with the valu 'failed'.
-    let failedLogin = req.query.status === 'failed' ? true : false;
-
-    if (failedLogin) {
-        res.send('Login failed. Invalid username or password.');
-    } else {
-        res.send('Please enter your username and password to login.');
+    try {
+        // Check if login failed by checking if the path contains a query parameter with the valu 'failed'.
+        //let failedLogin = req.query.status === 'failed' ? true : false;
+        //if (failedLogin) {
+        //    res.status(401).send('Login failed. Invalid username or password.'); // Links: '/', '/login'
+        //} else 
+        if (req.cookies.username) {
+            //res.redirect('/welcome'); // Links: '/', 'logout', 'login'
+            res.send(`Hello ${req.cookies.username}, you are logged in.`);
+        } else {
+            res.status(401).send('Please enter your username and password to login.'); // Links: '/', 'login'
+        }
+    } catch (err) {
+        res.status(500).json({ message: "Error in invocation of API: /login" });
     }
 });
 
 app.get('/welcome', (req, res) => {
-    let username = req.cookies.username;
-    res.send(`Welcome back, ${username}!`);
-})
+    try {
+        let username = req.cookies.username;
+        if (username) {
+            res.send(`Welcome back, ${username}!`); // Links: '/', 'logout', 'login'
+        } else {
+            res.status(401).json({ message: "Unauthorized user." });
+        }
+    } catch (err) {
+        res.status(500).json({ message: "Error in invocation of API: /welcome" });
+    }
+});
 
 // Set a route to handle POST request for login.
 app.post('/login', (req, res) => {
@@ -48,25 +74,37 @@ app.post('/login', (req, res) => {
         username: "Billy",
         password: "abc123",
     };
-
-    let { username, password } = req.body;
-    if (username === 'Billy' && password === 'abc123') {
-        res.cookie("username", username);
-        //res.send('Login successful.');
-        return res.redirect('/welcome');
-    } else {
-        //res.send('Login failed.');
-        return res.redirect('/login?status=failed')
+    try {
+        let { username, password } = req.body;
+        if (username === userDetails.username && password === userDetails.password) {
+            res.cookie("username", username, {
+                maxAge: 24 * 60 * 60 * 1000,
+                httpOnly: true, // ensure cookie not accessible using JavaScript code
+                secure: false, // server is on localhost
+                sameSite: 'lax' // set cookie only when browser's domain matches cookie's domain (eliminates third party's domains)
+            });
+            res.send('Successful login!');
+            // res.redirect('/welcome'); // Links: '/', 'logout', 'login'
+        } else {
+            res.status(401).send('Invalid username or password') // Links: '/', 'login'
+        }
+    } catch (err) {
+        res.status(500).json({ message: "Error in invocation of API: /login" });
     }
 });
 
 // Set a route for user to logout. 
 // Delete the username cookie when user logged out.
 app.get('/logout', (req, res) => {
-    res.clearCookie('username');
-    res.redirect('/login');
+    try {
+        res.clearCookie('username');
+        res.send('You are logged out.'); // Links: '/', 'welcome', 'login'
+    } catch (err) {
+        res.status(500).json({ message: "Error in invocation of API: /logout" });
+    }
 });
 
+// Following for browser convenience, delete in fuzzing test.
 // Set a route for sending a cookie from the server to a client.
 app.get('/setCookie', (req, res) => {
     const cookieName = 'username';
