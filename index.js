@@ -28,11 +28,12 @@ app.get('/', (req, res) => {
         if (req.cookies && req.cookies.username) {
             res.send(`Hello ${req.cookies.username}!`); // Links: 'welcome', 'logout'
         } else {
-            res.status(401).send('You must first login'); // Links: '/'
+            //res.statusMessage('ABC'); // implant this to trigger a 500 internal server error
+            res.status(401).json({ message: "Unauthorized. You must first login." });; // Links: '/'
         }
     } catch (err) {
         console.log(err);
-        res.status(500).json({ message: "Error in invocation of API: /" });
+        res.status(500).json({ message: "Error in calling the endpoint: /" });
     }
 });
 
@@ -48,10 +49,10 @@ app.get('/login', (req, res) => {
             //res.redirect('/welcome'); // Links: '/', 'logout', 'login'
             res.send(`Hello ${req.cookies.username}, you are logged in.`);
         } else {
-            res.status(401).send('Please enter your username and password to login.'); // Links: '/', 'login'
+            res.status(401).json({ message: "Unauthorized. You must first login." }); // Links: '/', 'login'
         }
     } catch (err) {
-        res.status(500).json({ message: "Error in invocation of API: /login" });
+        res.status(500).json({ message: "Error in calling the endpoint: /login" });
     }
 });
 
@@ -61,10 +62,10 @@ app.get('/welcome', (req, res) => {
         if (username) {
             res.send(`Welcome back, ${username}!`); // Links: '/', 'logout', 'login'
         } else {
-            res.status(401).json({ message: "Unauthorized user." });
+            res.status(401).json({ message: "Unauthorized user. You must first login." });
         }
     } catch (err) {
-        res.status(500).json({ message: "Error in invocation of API: /welcome" });
+        res.status(500).json({ message: "Error in calling the endpoint: /welcome" });
     }
 });
 
@@ -86,10 +87,10 @@ app.post('/login', (req, res) => {
             res.send('Successful login!');
             // res.redirect('/welcome'); // Links: '/', 'logout', 'login'
         } else {
-            res.status(401).send('Invalid username or password') // Links: '/', 'login'
+            res.status(401).json({ message: "Invalid username or password." }); // Links: '/', 'login'
         }
     } catch (err) {
-        res.status(500).json({ message: "Error in invocation of API: /login" });
+        res.status(500).json({ message: "Error in calling the endpoint: /login" });
     }
 });
 
@@ -100,7 +101,7 @@ app.get('/logout', (req, res) => {
         res.clearCookie('username');
         res.send('You are logged out.'); // Links: '/', 'welcome', 'login'
     } catch (err) {
-        res.status(500).json({ message: "Error in invocation of API: /logout" });
+        res.status(500).json({ message: "Error in calling the endpoint: /logout" });
     }
 });
 
